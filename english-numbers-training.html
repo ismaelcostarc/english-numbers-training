@@ -565,7 +565,7 @@
         };
       };
 
-      // --- Data Management Functions ---
+      // --- Data Management Functions (Omitted for brevity) ---
 
       const saveState = (key, value) => {
         try {
@@ -1098,30 +1098,69 @@
         } else if (key === "hour") {
           const parts = value.split(" ");
           const time = parts[0];
-          const period = parts[1];
+          const period = parts[1]; // AM or PM
           const [hourStr, minuteStr] = time.split(":");
 
           let hourInt = parseInt(hourStr, 10);
           const minuteInt = parseInt(minuteStr, 10);
 
-          let hourWord;
-          if (hourInt === 12 || hourInt === 0) {
-            // 12 AM/PM
-            hourWord = "twelve";
-          } else {
-            hourWord = numberToWords(hourInt);
+          // Convert 12h clock to 24h clock for logic: 12 AM (midnight) = 0, 12 PM (noon) = 12
+          let totalMinutes = (hourInt % 12) * 60 + minuteInt;
+          if (period === "PM" && hourInt !== 12) {
+            totalMinutes += 12 * 60;
+          } else if (period === "AM" && hourInt === 12) {
+            totalMinutes -= 12 * 60;
           }
 
-          let minuteWord;
+          let descriptivePhrase = "";
+          let minutesAway;
+          let targetHourInt;
+
+          // Determine the descriptive phrase
           if (minuteInt === 0) {
-            minuteWord = "o'clock";
-          } else if (minuteInt < 10) {
-            minuteWord = `oh ${numberToWords(minuteInt)}`;
+            // X o'clock
+            descriptivePhrase = `${numberToWords(hourInt)} o'clock`;
+          } else if (minuteInt === 30) {
+            // Half past X
+            descriptivePhrase = `half past ${numberToWords(hourInt)}`;
+          } else if (minuteInt === 15) {
+            // A quarter past X
+            descriptivePhrase = `a quarter past ${numberToWords(hourInt)}`;
+          } else if (minuteInt === 45) {
+            // A quarter to Y
+            minutesAway = 60 - minuteInt;
+            targetHourInt = (hourInt % 12) + 1;
+            if (targetHourInt === 13) targetHourInt = 1;
+            descriptivePhrase = `a quarter to ${numberToWords(targetHourInt)}`;
+          } else if (minuteInt < 30) {
+            // X minutes past Y
+            descriptivePhrase = `${numberToWords(
+              minuteInt
+            )} minutes past ${numberToWords(hourInt)}`;
           } else {
-            minuteWord = numberToWords(minuteInt);
+            // X minutes to Y
+            minutesAway = 60 - minuteInt;
+            targetHourInt = (hourInt % 12) + 1;
+            if (targetHourInt === 13) targetHourInt = 1;
+            descriptivePhrase = `${numberToWords(
+              minutesAway
+            )} minutes to ${numberToWords(targetHourInt)}`;
           }
 
-          words = `${hourWord} ${minuteWord} ${period}`;
+          // Add Midnight/Midday distinction
+          let timeOfDay;
+          if (hourInt === 12 && period === "PM") {
+            timeOfDay = "midday";
+          } else if (hourInt === 12 && period === "AM") {
+            timeOfDay = "midnight";
+          } else if (period === "AM") {
+            timeOfDay = "in the morning";
+          } else {
+            timeOfDay = "in the afternoon";
+          }
+
+          words = `${descriptivePhrase} ${timeOfDay}`;
+          return words.trim();
         } else if (key === "largeNumber") {
           words = numberToWords(value);
         } else if (key === "decimalNumber") {
@@ -1129,12 +1168,11 @@
 
           let wholeWord = numberToWords(parseInt(whole));
           if (parseInt(whole) === 0) {
-            wholeWord = "zero"; // Changed from nought
+            wholeWord = "zero";
           }
 
           let decimalWords = "";
           if (decimal) {
-            // Changed from nought
             decimalWords = decimal
               .split("")
               .map((d) => (d === "0" ? "zero" : numberToWords(parseInt(d))))
@@ -1155,7 +1193,7 @@
               let word;
 
               if (group === "00") {
-                word = "double zero"; // Changed from double nought
+                word = "double zero";
               } else if (
                 group.charAt(0) === group.charAt(1) &&
                 group.charAt(0) !== "0"
