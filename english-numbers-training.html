@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Random Data Register - Data Management</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+      crossorigin="anonymous"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+      .data-display-box {
+        min-height: 100px;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: #e9ecef;
+        text-align: center;
+      }
+      .data-title {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #007bff;
+        margin-bottom: 10px;
+      }
+      .data-value {
+        font-size: 2.5rem;
+        color: #333;
+      }
+      .timer-box {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #d9534f;
+        margin-bottom: 20px;
+      }
+      .log-box {
+        height: 400px;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        padding: 10px;
+        background-color: #f8f9fa;
+        margin-bottom: 10px;
+      }
+      .log-entry {
+        border-bottom: 1px dashed #e9ecef;
+        padding-bottom: 5px;
+        margin-bottom: 5px;
+      }
+      .right-log {
+        color: green;
+      }
+      .wrong-log {
+        color: red;
+      }
+      .blank-field {
+        color: #ccc !important;
+      }
+      .data-buttons button {
+        margin-bottom: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container mt-5">
+      <h1 class="mb-4 text-center">Random Data Single Test (Data Manager)</h1>
+      <hr />
+
+      <div class="row">
+        <div class="col-md-8">
+          <div class="timer-box text-center">
+            New Number In: <span id="stopwatch-display">00:00:00</span> ⏱️
+          </div>
+
+          <div class="text-center mb-4">
+            <button
+              class="btn btn-secondary btn-sm"
+              data-bs-toggle="modal"
+              data-bs-target="#settingsModal"
+            >
+              Settings ⚙️
+            </button>
+          </div>
+
+          <div id="data-display" class="data-display-box mb-4">
+            <div id="number-type-title" class="data-title"></div>
+            <div id="number-value" class="data-value"></div>
+          </div>
+
+          <div id="action-area" class="mt-4">
+            <div id="check-next-buttons">
+              <button
+                id="check-word-button"
+                class="btn btn-success btn-lg"
+                onclick="handleCheckWord()"
+                disabled
+              >
+                Check Word
+              </button>
+              <button
+                id="next-number-button"
+                class="btn btn-primary btn-lg ms-2"
+                onclick="handleNextNumber()"
+                disabled
+              >
+                Next Number
+              </button>
+            </div>
+
+            <div
+              id="feedback-area"
+              style="display: none"
+              class="mt-3 p-3 border rounded"
+            >
+              <p class="mb-2"><strong>Written Word:</strong></p>
+              <div class="alert alert-info" role="alert">
+                <strong id="written-number-text"></strong>
+              </div>
+              <button
+                class="btn btn-success btn-lg me-2"
+                onclick="handleFeedback('right')"
+              >
+                Right ✅
+              </button>
+              <button
+                class="btn btn-danger btn-lg"
+                onclick="handleFeedback('wrong')"
+              >
+                Wrong ❌
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <h2>Logs 📝</h2>
+          <div id="logs-list" class="log-box">
+            <p class="text-muted">No attempts logged yet, mate.</p>
+          </div>
+
+          <div class="data-buttons">
+            <button class="btn btn-success w-100" onclick="handleExportData()">
+              Export Data (.json) 💾
+            </button>
+            <input
+              type="file"
+              id="importFile"
+              accept=".json"
+              style="display: none"
+              onchange="handleImport(event)"
+            />
+            <button
+              class="btn btn-warning w-100"
+              onclick="document.getElementById('importFile').click()"
+            >
+              Import Data (.json) 📤
+            </button>
+
+            <hr />
+
+            <button
+              class="btn btn-info w-100"
+              data-bs-toggle="modal"
+              data-bs-target="#statsModal"
+              onclick="renderCharts()"
+            >
+              View Statistics in Graphics 📊
+            </button>
+            <button class="btn btn-danger w-100" onclick="handleEraseData()">
+              Erase All Data 🗑️
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="modal fade"
+      id="settingsModal"
+      tabindex="-1"
+      aria-labelledby="settingsModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="settingsModalLabel">App Settings</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="stopwatchTime" class="form-label"
+                >Stopwatch Duration (Minutes):</label
+              >
+              <input
+                type="number"
+                id="stopwatchTime"
+                class="form-control"
+                min="1"
+                step="1"
+                required
+              />
+              <div class="form-text">
+                Sets the time until the next number automatically appears.
+              </div>
+            </div>
+
+            <hr />
+
+            <div class="mb-3">
+              <label class="form-label"
+                >Select Number Types for Generation:</label
+              >
+              <div id="numberTypeCheckboxes"></div>
+              <div
+                class="form-text text-danger"
+                id="typeWarning"
+                style="display: none"
+              >
+                You must select at least one number type.
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="saveSettings()"
+            >
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="modal fade"
+      id="statsModal"
+      tabindex="-1"
+      aria-labelledby="statsModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="statsModalLabel">
+              Registration Attempt Statistics
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-md-6 mb-4">
+                <h4 class="text-center">Results by Number Type (Percentage)</h4>
+                <canvas id="typeChart"></canvas>
+              </div>
+              <div class="col-md-6 mb-4">
+                <h4 class="text-center">Results Over Time (Date Specific)</h4>
+                <canvas id="timeChart"></canvas>
+              </div>
+              <div class="col-md-6 offset-md-3">
+                <h4 class="text-center">Total Attempts by Day</h4>
+                <canvas id="totalAttemptsChart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let currentNumber = { key: "", value: "" };
+      let currentWrittenWords = "";
+      let generationTime = null;
+      let logs = [];
+      let statistics = [];
+      let typeChartInstance = null;
+      let timeChartInstance = null;
+      let totalAttemptsChartInstance = null;
+      let defaultRefreshMinutes = 2;
+      let refreshInterval = defaultRefreshMinutes * 60 * 1000;
+      let countdownInterval;
+      let numberReady = false;
+
+      // NEW STATE FOR NUMBER TYPES
+      let enabledNumberKeys = [];
+
+      const STORAGE_KEYS = {
+        END_TIME: "timerEndTime",
+        CURRENT_NUMBER: "currentNumberData",
+        LOGS: "attemptLogs",
+        STATISTICS: "attemptStatistics",
+        GENERATION_TIME: "numberGenTime",
+        STOPWATCH_DURATION: "stopwatchDurationMinutes",
+        ENABLED_NUMBER_TYPES: "enabledNumberTypes",
+      };
+      const ALL_DATA_KEYS = [
+        STORAGE_KEYS.LOGS,
+        STORAGE_KEYS.STATISTICS,
+        STORAGE_KEYS.END_TIME,
+        STORAGE_KEYS.CURRENT_NUMBER,
+        STORAGE_KEYS.GENERATION_TIME,
+        STORAGE_KEYS.STOPWATCH_DURATION,
+        STORAGE_KEYS.ENABLED_NUMBER_TYPES,
+      ];
+
+      const displayTitles = {
+        largeNumber: "Large Whole Number",
+        decimalNumber: "Decimal Number",
+        phoneNumber: "Phone Number",
+        date: "Date",
+        moneyQuantity: "Money Quantity",
+        // NEW TYPE
+        hour: "Hour (AM/PM)",
+      };
+      const allNumberKeys = Object.keys(displayTitles);
+
+      // --- Settings Functions ---
+
+      const loadSettings = () => {
+        const savedDuration = loadState(STORAGE_KEYS.STOPWATCH_DURATION);
+        if (savedDuration && savedDuration >= 1) {
+          defaultRefreshMinutes = savedDuration;
+        }
+        refreshInterval = defaultRefreshMinutes * 60 * 1000;
+
+        const input = document.getElementById("stopwatchTime");
+        if (input) {
+          input.value = defaultRefreshMinutes;
+        }
+
+        const savedTypes = loadState(STORAGE_KEYS.ENABLED_NUMBER_TYPES);
+        if (savedTypes && Array.isArray(savedTypes) && savedTypes.length > 0) {
+          enabledNumberKeys = savedTypes;
+        } else {
+          enabledNumberKeys = [...allNumberKeys];
+        }
+
+        renderSettingsCheckboxes();
+      };
+
+      const renderSettingsCheckboxes = () => {
+        const container = document.getElementById("numberTypeCheckboxes");
+        let html = "";
+        allNumberKeys.forEach((key) => {
+          const title = displayTitles[key];
+          const isChecked = enabledNumberKeys.includes(key) ? "checked" : "";
+          html += `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="${key}" id="check-${key}" ${isChecked}>
+                        <label class="form-check-label" for="check-${key}">
+                            ${title}
+                        </label>
+                    </div>
+                `;
+        });
+        container.innerHTML = html;
+      };
+
+      const saveSettings = () => {
+        const input = document.getElementById("stopwatchTime");
+        const newDuration = parseInt(input.value);
+
+        if (isNaN(newDuration) || newDuration < 1) {
+          alert("Please enter a valid duration of 1 minute or more.");
+          return;
+        }
+        saveState(STORAGE_KEYS.STOPWATCH_DURATION, newDuration);
+        defaultRefreshMinutes = newDuration;
+        refreshInterval = newDuration * 60 * 1000;
+
+        const checkedTypes = Array.from(
+          document.querySelectorAll("#numberTypeCheckboxes input:checked")
+        ).map((input) => input.value);
+
+        if (checkedTypes.length === 0) {
+          document.getElementById("typeWarning").style.display = "block";
+          return;
+        }
+        document.getElementById("typeWarning").style.display = "none";
+
+        saveState(STORAGE_KEYS.ENABLED_NUMBER_TYPES, checkedTypes);
+        enabledNumberKeys = checkedTypes;
+
+        startCountdown();
+
+        const modalElement = document.getElementById("settingsModal");
+        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+        if (modalInstance) {
+          modalInstance.hide();
+        }
+
+        if (
+          currentNumber.key &&
+          !enabledNumberKeys.includes(currentNumber.key)
+        ) {
+          handleNextNumber();
+        }
+      };
+
+      // --- Core Helpers (Data Generation, Formatting, etc.) ---
+
+      const getOrdinalWord = (n) => {
+        if (n >= 11 && n <= 13) return numberToWords(n) + "th";
+        switch (n % 10) {
+          case 1:
+            return numberToWords(n) + "st";
+          case 2:
+            return numberToWords(n) + "nd";
+          case 3:
+            return numberToWords(n) + "rd";
+          default:
+            return numberToWords(n) + "th";
+        }
+      };
+
+      const numberToWords = (n) => {
+        if (n === 0) return "zero";
+        const lessThanTwenty = [
+          "zero",
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six",
+          "seven",
+          "eight",
+          "nine",
+          "ten",
+          "eleven",
+          "twelve",
+          "thirteen",
+          "fourteen",
+          "fifteen",
+          "sixteen",
+          "seventeen",
+          "eighteen",
+          "nineteen",
+        ];
+        const tens = [
+          "",
+          "",
+          "twenty",
+          "thirty",
+          "forty",
+          "fifty",
+          "sixty",
+          "seventy",
+          "eighty",
+          "ninety",
+        ];
+        if (n < 20) return lessThanTwenty[n];
+        if (n < 100) {
+          const remainder = n % 10;
+          return (
+            tens[Math.floor(n / 10)] +
+            (remainder ? `-${lessThanTwenty[remainder]}` : "")
+          );
+        }
+        if (n < 1000) {
+          const remainder = n % 100;
+          return (
+            lessThanTwenty[Math.floor(n / 100)] +
+            " hundred" +
+            (remainder ? ` and ${numberToWords(remainder)}` : "")
+          );
+        }
+        if (n < 1000000) {
+          const remainder = n % 1000;
+          return (
+            numberToWords(Math.floor(n / 1000)) +
+            " thousand" +
+            (remainder ? ` ${numberToWords(remainder)}` : "")
+          );
+        }
+        if (n < 1000000000) {
+          const remainder = n % 1000000;
+          return (
+            numberToWords(Math.floor(n / 1000000)) +
+            " million" +
+            (remainder ? ` ${numberToWords(remainder)}` : "")
+          );
+        }
+        return "Number too large, pal.";
+      };
+      const generateRandomDigits = (length) => {
+        let result = "";
+        for (let i = 0; i < length; i++) {
+          result += Math.floor(Math.random() * 10).toString();
+        }
+        return result;
+      };
+      const generateAllData = () => {
+        const largeNumber = Math.floor(Math.random() * 1000001);
+        const integerPart = Math.floor(Math.random() * 100);
+        const decimalPart = Math.floor(Math.random() * 1000);
+        const decimalNumber = parseFloat(
+          `${integerPart}.${decimalPart}`
+        ).toFixed(3);
+
+        const networkCode = generateRandomDigits(5);
+        const subscriberNumber = generateRandomDigits(6);
+
+        const phoneNumber = `0${networkCode} ${subscriberNumber}`;
+
+        const startTimestamp =
+          new Date().getTime() - 10 * 365 * 24 * 60 * 60 * 1000;
+        const endTimestamp = new Date().getTime();
+        const randomTimestamp =
+          startTimestamp + Math.random() * (endTimestamp - startTimestamp);
+        const randomDate = new Date(randomTimestamp);
+        const date = randomDate.toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        });
+        const pounds = Math.floor(Math.random() * 1000);
+        const pence = Math.floor(Math.random() * 100);
+        const moneyQuantity = `£${pounds.toFixed(0)}.${pence
+          .toString()
+          .padStart(2, "0")}`;
+
+        // NEW: Hour Generation (HH:MM AM/PM)
+        const randomTime = new Date(Math.floor(Math.random() * 86400000)); // Time within 24 hours
+        const hour = randomTime.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+
+        return {
+          largeNumber,
+          decimalNumber,
+          phoneNumber,
+          date,
+          moneyQuantity,
+          hour,
+        };
+      };
+
+      // --- Data Management Functions (Modified for new key) ---
+
+      const saveState = (key, value) => {
+        try {
+          localStorage.setItem(key, JSON.stringify(value));
+        } catch (e) {
+          console.error("Could not save to localStorage", e);
+        }
+      };
+      const loadState = (key) => {
+        try {
+          const item = localStorage.getItem(key);
+          return item ? JSON.parse(item) : null;
+        } catch (e) {
+          console.error("Could not load from localStorage", e);
+          return null;
+        }
+      };
+      const clearNumberState = () => {
+        localStorage.removeItem(STORAGE_KEYS.CURRENT_NUMBER);
+        localStorage.removeItem(STORAGE_KEYS.GENERATION_TIME);
+      };
+      const collectDataForExport = () => {
+        const data = {};
+        ALL_DATA_KEYS.forEach((key) => {
+          const item = localStorage.getItem(key);
+          if (item) {
+            if (
+              key === STORAGE_KEYS.STOPWATCH_DURATION ||
+              key === STORAGE_KEYS.ENABLED_NUMBER_TYPES
+            ) {
+              data[key] = loadState(key);
+            } else {
+              data[key] = JSON.parse(item);
+            }
+          }
+        });
+        data.exportTimestamp = Date.now();
+        data.version = "1.0";
+        return data;
+      };
+      const handleExportData = () => {
+        const data = collectDataForExport();
+        if (Object.keys(data).length <= 2) {
+          alert("No data found to export.");
+          return;
+        }
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `registration_data_${new Date()
+          .toISOString()
+          .slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      };
+      const handleImport = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          try {
+            const importedData = JSON.parse(e.target.result);
+            if (!importedData || typeof importedData !== "object") {
+              throw new Error("Invalid JSON structure.");
+            }
+            if (
+              !confirm(
+                "Importing data will overwrite ALL existing logs and statistics. Continue?"
+              )
+            ) {
+              return;
+            }
+            handleEraseData(true);
+            let importedCount = 0;
+            ALL_DATA_KEYS.forEach((key) => {
+              if (importedData[key] !== undefined) {
+                if (
+                  key === STORAGE_KEYS.STOPWATCH_DURATION ||
+                  key === STORAGE_KEYS.ENABLED_NUMBER_TYPES
+                ) {
+                  saveState(key, importedData[key]);
+                } else {
+                  saveState(key, importedData[key]);
+                }
+                importedCount++;
+              }
+            });
+            if (importedCount === 0) {
+              alert(
+                "The imported file did not contain any usable application data."
+              );
+              return;
+            }
+            alert(
+              `Successfully imported ${importedCount} data sets. Reloading page state.`
+            );
+            location.reload();
+          } catch (error) {
+            alert(`Error importing data: ${error.message}`);
+          }
+        };
+        reader.readAsText(file);
+      };
+      const handleEraseData = (skipPrompt = false) => {
+        const bootstrapModal =
+          typeof bootstrap !== "undefined" ? bootstrap.Modal : null;
+        if (
+          skipPrompt ||
+          confirm(
+            "Are you absolutely sure you want to erase ALL saved attempts, logs, and timer data? This cannot be undone."
+          )
+        ) {
+          ALL_DATA_KEYS.forEach((key) => {
+            localStorage.removeItem(key);
+          });
+          logs = [];
+          statistics = [];
+          clearNumberState();
+          clearInterval(countdownInterval);
+          if (typeChartInstance) {
+            typeChartInstance.data.datasets[0].data = [];
+            typeChartInstance.data.datasets[1].data = [];
+            typeChartInstance.data.labels = Object.values(displayTitles);
+            typeChartInstance.update();
+          }
+          if (timeChartInstance) {
+            timeChartInstance.data.datasets[0].data = [];
+            timeChartInstance.data.datasets[1].data = [];
+            timeChartInstance.data.labels = [];
+            timeChartInstance.update();
+          }
+          if (totalAttemptsChartInstance) {
+            totalAttemptsChartInstance.data.datasets[0].data = [];
+            totalAttemptsChartInstance.data.labels = [];
+            totalAttemptsChartInstance.update();
+          }
+          const modalElement = document.getElementById("statsModal");
+          if (modalElement && bootstrapModal) {
+            const modalInstance = bootstrapModal.getInstance(modalElement);
+            if (modalInstance) {
+              modalInstance.hide();
+            }
+          }
+          clearDisplay();
+          loadLogs();
+          if (!skipPrompt) {
+            startCountdown();
+            alert("All data has been erased. Starting fresh!");
+          }
+        }
+      };
+
+      // --- Display, Timer, and State Logic ---
+
+      const formatTime = (ms) => {
+        const totalSeconds = Math.floor(ms / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        const pad = (num) => num.toString().padStart(2, "0");
+        return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+      };
+      const startCountdown = (initialEndTime = null) => {
+        clearInterval(countdownInterval);
+        let endTime = initialEndTime || Date.now() + refreshInterval;
+        saveState(STORAGE_KEYS.END_TIME, endTime);
+        const display = document.getElementById("stopwatch-display");
+        const updateTimer = () => {
+          if (Date.now() >= endTime) {
+            clearInterval(countdownInterval);
+            display.textContent = "00:00:00";
+            localStorage.removeItem(STORAGE_KEYS.END_TIME);
+            generateAndDisplayNumber();
+          } else {
+            display.textContent = formatTime(endTime - Date.now());
+            saveState(STORAGE_KEYS.END_TIME, endTime);
+          }
+        };
+        updateTimer();
+        countdownInterval = setInterval(updateTimer, 1000);
+      };
+      const clearDisplay = () => {
+        document.getElementById("number-type-title").textContent =
+          "Waiting for next number...";
+        document.getElementById("number-value").textContent = "---";
+        document.getElementById("number-value").classList.add("blank-field");
+        document.getElementById("check-word-button").disabled = true;
+        document.getElementById("next-number-button").disabled = true;
+        document.getElementById("feedback-area").style.display = "none";
+        document.getElementById("check-next-buttons").style.display = "block";
+        numberReady = false;
+      };
+      const displayNumber = (key, value, genTime) => {
+        currentNumber = { key, value };
+        generationTime = genTime;
+        document.getElementById("number-type-title").textContent =
+          displayTitles[key];
+        document.getElementById("number-value").textContent =
+          key === "largeNumber" ? value.toLocaleString("en-GB") : value;
+        document.getElementById("number-value").classList.remove("blank-field");
+        document.getElementById("check-word-button").disabled = false;
+        document.getElementById("next-number-button").disabled = false;
+        document.getElementById("feedback-area").style.display = "none";
+        document.getElementById("check-next-buttons").style.display = "block";
+        numberReady = true;
+      };
+      const generateAndDisplayNumber = () => {
+        const allGeneratedData = generateAllData();
+
+        const availableKeys = allNumberKeys.filter((key) =>
+          enabledNumberKeys.includes(key)
+        );
+
+        if (availableKeys.length === 0) {
+          document.getElementById("number-type-title").textContent =
+            "ERROR: No number types selected in Settings.";
+          return;
+        }
+
+        const key =
+          availableKeys[Math.floor(Math.random() * availableKeys.length)];
+        const value = allGeneratedData[key];
+        const genTime = Date.now();
+        saveState(STORAGE_KEYS.CURRENT_NUMBER, { key, value });
+        saveState(STORAGE_KEYS.GENERATION_TIME, genTime);
+        displayNumber(key, value, genTime);
+        startCountdown();
+      };
+
+      const loadLogs = () => {
+        const storedLogs = loadState(STORAGE_KEYS.LOGS);
+        const logsList = document.getElementById("logs-list");
+        logsList.innerHTML = "";
+        if (storedLogs && storedLogs.length > 0) {
+          logs = storedLogs;
+          logs.forEach((log) => {
+            const logItem = document.createElement("p");
+            logItem.className = `log-entry ${log.class}`;
+            logItem.innerHTML = `[${log.dateTime}] **${log.text}** attempt for **${log.type}**: "${log.words}"`;
+            logsList.prepend(logItem);
+          });
+        } else {
+          logsList.innerHTML =
+            '<p class="text-muted">No attempts logged yet, mate.</p>';
+          logs = [];
+        }
+        statistics = loadState(STORAGE_KEYS.STATISTICS) || [];
+      };
+
+      const processStatistics = () => {
+        const dataByType = {};
+        const dataByTime = {};
+
+        if (statistics.length === 0) {
+          return { dataByType: {}, dataByTime: {}, sortedTimeKeys: [] };
+        }
+
+        const dateFormatOptions = {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        };
+        const now = Date.now();
+
+        Object.values(displayTitles).forEach((title) => {
+          dataByType[title] = {
+            right: 0,
+            wrong: 0,
+            total: 0,
+            rightPercent: 0,
+            wrongPercent: 0,
+          };
+        });
+
+        statistics.forEach((stat) => {
+          const type = stat.type;
+          const result = stat.result;
+          const timestamp = stat.timestamp;
+
+          if (dataByType[type]) {
+            dataByType[type][result] += 1;
+            dataByType[type].total += 1;
+          }
+
+          const dayTimestamp = new Date(timestamp);
+          const dateKey = dayTimestamp.toLocaleDateString(
+            "en-GB",
+            dateFormatOptions
+          );
+
+          if (!dataByTime[dateKey]) {
+            dataByTime[dateKey] = {
+              right: 0,
+              wrong: 0,
+              total: 0,
+              sortKey: dayTimestamp.setHours(0, 0, 0, 0),
+            };
+          }
+          dataByTime[dateKey][result] += 1;
+          dataByTime[dateKey].total += 1;
+        });
+
+        // Calculate Percentages for Chart 1
+        Object.keys(dataByType).forEach((typeKey) => {
+          const total = dataByType[typeKey].total;
+          if (total > 0) {
+            dataByType[typeKey].rightPercent = (
+              (dataByType[typeKey].right / total) *
+              100
+            ).toFixed(1);
+            dataByType[typeKey].wrongPercent = (
+              (dataByType[typeKey].wrong / total) *
+              100
+            ).toFixed(1);
+          }
+        });
+
+        const sortedTimeKeys = Object.keys(dataByTime).sort(
+          (a, b) => dataByTime[a].sortKey - dataByTime[b].sortKey
+        );
+
+        return { dataByType, dataByTime, sortedTimeKeys };
+      };
+
+      const renderCharts = () => {
+        const { dataByType, dataByTime, sortedTimeKeys } = processStatistics();
+
+        const typeLabels = Object.keys(displayTitles);
+        const typeRightPercent = typeLabels.map(
+          (key) =>
+            (dataByType[displayTitles[key]] || { rightPercent: 0 }).rightPercent
+        );
+        const typeWrongPercent = typeLabels.map(
+          (key) =>
+            (dataByType[displayTitles[key]] || { wrongPercent: 0 }).wrongPercent
+        );
+
+        const timeLabels = sortedTimeKeys;
+        const timeRight = sortedTimeKeys.map((key) => dataByTime[key].right);
+        const timeWrong = sortedTimeKeys.map((key) => dataByTime[key].wrong);
+        const timeTotal = sortedTimeKeys.map((key) => dataByTime[key].total);
+
+        // Tooltip callbacks for Chart 1 (Percentage)
+        const typeTooltipTitleCallback = (tooltipItems) =>
+          tooltipItems[0].label;
+        const typeTooltipLabelCallback = (tooltipItem) => {
+          const totalCount = dataByType[tooltipItem.label].total;
+          if (totalCount === 0)
+            return `${tooltipItem.dataset.label}: 0% (0 attempts)`;
+
+          const percentage = parseFloat(tooltipItem.formattedValue);
+          // Calculate actual count based on percentage * total
+          const count = Math.round((totalCount * percentage) / 100);
+          return `${tooltipItem.dataset.label}: ${tooltipItem.formattedValue}% (${count} attempts)`;
+        };
+
+        // --- Chart 1: Results by Number Type (Percentage Stacked Bar) ---
+        const ctxType = document.getElementById("typeChart").getContext("2d");
+
+        if (typeChartInstance) {
+          typeChartInstance.data.datasets[0].data = typeRightPercent;
+          typeChartInstance.data.datasets[1].data = typeWrongPercent;
+          typeChartInstance.update();
+        } else {
+          typeChartInstance = new Chart(ctxType, {
+            type: "bar",
+            data: {
+              labels: typeLabels,
+              datasets: [
+                {
+                  label: "Correct %",
+                  data: typeRightPercent,
+                  backgroundColor: "rgba(75, 192, 192, 0.8)",
+                },
+                {
+                  label: "Incorrect %",
+                  data: typeWrongPercent,
+                  backgroundColor: "rgba(255, 99, 132, 0.8)",
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  stacked: true,
+                  max: 100,
+                  title: { display: true, text: "Percentage (%)" },
+                },
+                x: { stacked: true },
+              },
+              plugins: {
+                tooltip: {
+                  callbacks: {
+                    title: typeTooltipTitleCallback,
+                    label: typeTooltipLabelCallback,
+                  },
+                },
+              },
+            },
+          });
+        }
+
+        // --- Chart 2: Results Over Time (Date Specific) ---
+        const ctxTime = document.getElementById("timeChart").getContext("2d");
+        if (timeChartInstance) {
+          timeChartInstance.data.labels = timeLabels;
+          timeChartInstance.data.datasets[0].data = timeRight;
+          timeChartInstance.data.datasets[1].data = timeWrong;
+          timeChartInstance.update();
+        } else {
+          timeChartInstance = new Chart(ctxTime, {
+            type: "line",
+            data: {
+              labels: timeLabels,
+              datasets: [
+                {
+                  label: "Correct Attempts",
+                  data: timeRight,
+                  borderColor: "rgba(75, 192, 192, 1)",
+                  tension: 0.1,
+                },
+                {
+                  label: "Incorrect Attempts",
+                  data: timeWrong,
+                  borderColor: "rgba(255, 99, 132, 1)",
+                  tension: 0.1,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              scales: { y: { beginAtZero: true } },
+              plugins: {
+                tooltip: {
+                  callbacks: {
+                    title: (tooltipItems) => tooltipItems[0].label,
+                    label: (tooltipItem) =>
+                      `${tooltipItem.dataset.label}: ${tooltipItem.formattedValue}`,
+                  },
+                },
+              },
+            },
+          });
+        }
+
+        // --- Chart 3: Total Attempts by Day ---
+        const ctxTotalAttempts = document
+          .getElementById("totalAttemptsChart")
+          .getContext("2d");
+        if (totalAttemptsChartInstance) {
+          totalAttemptsChartInstance.data.labels = timeLabels;
+          totalAttemptsChartInstance.data.datasets[0].data = timeTotal;
+          totalAttemptsChartInstance.update();
+        } else {
+          totalAttemptsChartInstance = new Chart(ctxTotalAttempts, {
+            type: "bar",
+            data: {
+              labels: timeLabels,
+              datasets: [
+                {
+                  label: "Total Attempts",
+                  data: timeTotal,
+                  backgroundColor: "rgba(54, 162, 235, 0.8)",
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  title: { display: true, text: "Number of Attempts" },
+                },
+              },
+              plugins: {
+                tooltip: {
+                  callbacks: {
+                    title: (tooltipItems) => tooltipItems[0].label,
+                    label: (tooltipItem) =>
+                      `Total: ${tooltipItem.formattedValue}`,
+                  },
+                },
+              },
+            },
+          });
+        }
+      };
+
+      const convertNumberToWords = (key, value) => {
+        let words = "";
+
+        if (key === "date") {
+          const parts = value.split("/");
+          const day = parseInt(parts[0]);
+          const monthIndex = parseInt(parts[1]) - 1;
+          const year = parseInt(parts[2]);
+
+          const monthNames = [
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December",
+          ];
+          const month = monthNames[monthIndex];
+
+          const dayWord = getOrdinalWord(day);
+
+          let yearWord;
+          if (year >= 2000) {
+            yearWord = numberToWords(year);
+          } else {
+            const century = Math.floor(year / 100);
+            const remainder = year % 100;
+            yearWord = `${numberToWords(century)} ${numberToWords(remainder)}`;
+          }
+
+          words = `the ${dayWord} of ${month} ${yearWord}`;
+          return words;
+        } else if (key === "hour") {
+          // NEW: Hour Pronunciation
+          // Example value: "09:45 AM"
+          const parts = value.split(" "); // ["09:45", "AM"]
+          const time = parts[0];
+          const period = parts[1];
+          const [hourStr, minuteStr] = time.split(":");
+
+          let hourInt = parseInt(hourStr, 10);
+          const minuteInt = parseInt(minuteStr, 10);
+
+          let hourWord;
+          // Special case: 12:XX PM/AM -> Twelve
+          if (hourInt === 12) {
+            hourWord = "twelve";
+          }
+          // Special case: 00:XX (12 AM) -> Twelve
+          else if (hourInt === 0) {
+            hourWord = "twelve";
+          } else {
+            hourWord = numberToWords(hourInt);
+          }
+
+          let minuteWord;
+          if (minuteInt === 0) {
+            minuteWord = "o'clock";
+          } else if (minuteInt < 10) {
+            minuteWord = `oh ${numberToWords(minuteInt)}`;
+          } else {
+            minuteWord = numberToWords(minuteInt);
+          }
+
+          // Final format: "nine forty-five AM"
+          words = `${hourWord} ${minuteWord} ${period}`;
+        } else if (key === "largeNumber") {
+          words = numberToWords(value);
+        } else if (key === "decimalNumber") {
+          const [whole, decimal] = String(value).split(".");
+
+          let wholeWord = numberToWords(parseInt(whole));
+          if (parseInt(whole) === 0) {
+            wholeWord = "nought";
+          }
+
+          let decimalWords = "";
+          if (decimal) {
+            decimalWords = decimal
+              .split("")
+              .map((d) => (d === "0" ? "nought" : numberToWords(parseInt(d))))
+              .join(" ");
+          }
+          words = `${wholeWord} point ${decimalWords}`;
+        } else if (key === "phoneNumber") {
+          const digits = value.replace(/\s/g, "");
+          let result = [];
+
+          result.push("oh");
+
+          for (let i = 1; i < digits.length; i += 2) {
+            const group = digits.slice(i, i + 2);
+
+            if (group.length === 2) {
+              const num = parseInt(group, 10);
+              let word;
+
+              if (group === "00") {
+                word = "double nought";
+              } else if (
+                group.charAt(0) === group.charAt(1) &&
+                group.charAt(0) !== "0"
+              ) {
+                word = `double ${numberToWords(parseInt(group.charAt(0), 10))}`;
+              } else if (group.startsWith("0")) {
+                word = `oh ${numberToWords(parseInt(group.charAt(1), 10))}`;
+              } else {
+                word = numberToWords(num);
+              }
+              result.push(word);
+            } else if (group.length === 1) {
+              result.push(
+                group === "0" ? "oh" : numberToWords(parseInt(group, 10))
+              );
+            }
+          }
+
+          words = result.join(" ");
+        } else if (key === "moneyQuantity") {
+          const valueClean = value.replace("£", "");
+          const [pounds, pence] = valueClean.split(".");
+          let poundsInt = parseInt(pounds);
+          let penceInt = parseInt(pence);
+
+          let poundsWords = numberToWords(poundsInt);
+          let penceWords = numberToWords(penceInt);
+
+          let currencyWords = "";
+
+          if (poundsInt > 0) {
+            currencyWords += `${poundsWords} ${
+              poundsInt === 1 ? "pound" : "pounds"
+            }`;
+            if (penceInt > 0) {
+              currencyWords += ` and ${penceWords} ${
+                penceInt === 1 ? "penny" : "pence"
+              }`;
+            }
+          } else if (penceInt > 0) {
+            currencyWords = `${penceWords} ${
+              penceInt === 1 ? "penny" : "pence"
+            }`;
+          } else {
+            currencyWords = "zero pounds and zero pence";
+          }
+
+          words = currencyWords;
+        }
+        return words;
+      };
+
+      const handleCheckWord = () => {
+        if (!numberReady) return;
+        currentWrittenWords = convertNumberToWords(
+          currentNumber.key,
+          currentNumber.value
+        );
+
+        document.getElementById("written-number-text").textContent =
+          currentWrittenWords;
+        document.getElementById("feedback-area").style.display = "block";
+
+        document.getElementById("check-next-buttons").style.display = "none";
+      };
+
+      const handleNextNumber = () => {
+        clearNumberState();
+        clearDisplay();
+        generateAndDisplayNumber();
+      };
+
+      const handleFeedback = (attempt) => {
+        const logText = attempt === "right" ? "Right" : "Wrong";
+        const logClass = attempt === "right" ? "right-log" : "wrong-log";
+
+        const fullDateTime = new Date().toLocaleString("en-US", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: true,
+        });
+
+        const timestamp = Date.now();
+        const numberTypeTitle = displayTitles[currentNumber.key];
+
+        const numberValueForLog = currentNumber.value;
+
+        const newLog = {
+          dateTime: fullDateTime,
+          text: logText,
+          class: logClass,
+          type: numberTypeTitle,
+          words: numberValueForLog,
+        };
+        logs.push(newLog);
+        saveState(STORAGE_KEYS.LOGS, logs);
+
+        const newStat = {
+          type: numberTypeTitle,
+          result: attempt,
+          timestamp: timestamp,
+        };
+        statistics.push(newStat);
+        saveState(STORAGE_KEYS.STATISTICS, statistics);
+
+        loadLogs();
+
+        clearNumberState();
+        clearDisplay();
+      };
+
+      const initialize = () => {
+        loadSettings();
+
+        loadLogs();
+
+        const savedEndTime = loadState(STORAGE_KEYS.END_TIME);
+        const savedNumberData = loadState(STORAGE_KEYS.CURRENT_NUMBER);
+        const savedGenTime = loadState(STORAGE_KEYS.GENERATION_TIME);
+
+        if (savedEndTime && savedEndTime > Date.now()) {
+          if (savedNumberData && savedGenTime) {
+            displayNumber(
+              savedNumberData.key,
+              savedNumberData.value,
+              savedGenTime
+            );
+          } else {
+            clearDisplay();
+          }
+          startCountdown(savedEndTime);
+        } else {
+          clearNumberState();
+          if (savedEndTime && Date.now() - savedEndTime < 5000) {
+            generateAndDisplayNumber();
+          } else {
+            clearDisplay();
+            startCountdown();
+          }
+        }
+      };
+
+      document.addEventListener("DOMContentLoaded", initialize);
+    </script>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>
