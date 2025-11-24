@@ -311,7 +311,6 @@
       let countdownInterval;
       let numberReady = false;
 
-      // NEW STATE FOR NUMBER TYPES
       let enabledNumberKeys = [];
 
       const STORAGE_KEYS = {
@@ -339,7 +338,6 @@
         phoneNumber: "Phone Number",
         date: "Date",
         moneyQuantity: "Money Quantity",
-        // NEW TYPE
         hour: "Hour (AM/PM)",
       };
       const allNumberKeys = Object.keys(displayTitles);
@@ -550,8 +548,7 @@
           .toString()
           .padStart(2, "0")}`;
 
-        // NEW: Hour Generation (HH:MM AM/PM)
-        const randomTime = new Date(Math.floor(Math.random() * 86400000)); // Time within 24 hours
+        const randomTime = new Date(Math.floor(Math.random() * 86400000));
         const hour = randomTime.toLocaleTimeString("en-US", {
           hour: "2-digit",
           minute: "2-digit",
@@ -568,7 +565,7 @@
         };
       };
 
-      // --- Data Management Functions (Modified for new key) ---
+      // --- Data Management Functions ---
 
       const saveState = (key, value) => {
         try {
@@ -724,8 +721,6 @@
           }
         }
       };
-
-      // --- Display, Timer, and State Logic ---
 
       const formatTime = (ms) => {
         const totalSeconds = Math.floor(ms / 1000);
@@ -924,7 +919,6 @@
             return `${tooltipItem.dataset.label}: 0% (0 attempts)`;
 
           const percentage = parseFloat(tooltipItem.formattedValue);
-          // Calculate actual count based on percentage * total
           const count = Math.round((totalCount * percentage) / 100);
           return `${tooltipItem.dataset.label}: ${tooltipItem.formattedValue}% (${count} attempts)`;
         };
@@ -1102,9 +1096,7 @@
           words = `the ${dayWord} of ${month} ${yearWord}`;
           return words;
         } else if (key === "hour") {
-          // NEW: Hour Pronunciation
-          // Example value: "09:45 AM"
-          const parts = value.split(" "); // ["09:45", "AM"]
+          const parts = value.split(" ");
           const time = parts[0];
           const period = parts[1];
           const [hourStr, minuteStr] = time.split(":");
@@ -1113,12 +1105,8 @@
           const minuteInt = parseInt(minuteStr, 10);
 
           let hourWord;
-          // Special case: 12:XX PM/AM -> Twelve
-          if (hourInt === 12) {
-            hourWord = "twelve";
-          }
-          // Special case: 00:XX (12 AM) -> Twelve
-          else if (hourInt === 0) {
+          if (hourInt === 12 || hourInt === 0) {
+            // 12 AM/PM
             hourWord = "twelve";
           } else {
             hourWord = numberToWords(hourInt);
@@ -1133,7 +1121,6 @@
             minuteWord = numberToWords(minuteInt);
           }
 
-          // Final format: "nine forty-five AM"
           words = `${hourWord} ${minuteWord} ${period}`;
         } else if (key === "largeNumber") {
           words = numberToWords(value);
@@ -1142,14 +1129,15 @@
 
           let wholeWord = numberToWords(parseInt(whole));
           if (parseInt(whole) === 0) {
-            wholeWord = "nought";
+            wholeWord = "zero"; // Changed from nought
           }
 
           let decimalWords = "";
           if (decimal) {
+            // Changed from nought
             decimalWords = decimal
               .split("")
-              .map((d) => (d === "0" ? "nought" : numberToWords(parseInt(d))))
+              .map((d) => (d === "0" ? "zero" : numberToWords(parseInt(d))))
               .join(" ");
           }
           words = `${wholeWord} point ${decimalWords}`;
@@ -1167,7 +1155,7 @@
               let word;
 
               if (group === "00") {
-                word = "double nought";
+                word = "double zero"; // Changed from double nought
               } else if (
                 group.charAt(0) === group.charAt(1) &&
                 group.charAt(0) !== "0"
